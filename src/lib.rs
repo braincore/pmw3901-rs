@@ -1,9 +1,8 @@
 //! A library for the PMW3901 optical flow sensor.
 
-extern crate byteorder;
 use byteorder::{ByteOrder, LittleEndian};
-extern crate spidev;
-use spidev::{Spidev, SpidevOptions, SpidevTransfer, SPI_MODE_3};
+use spidev::SpiModeFlags;
+use spidev::{Spidev, SpidevOptions, SpidevTransfer};
 use std::io;
 use std::thread;
 use std::time;
@@ -31,7 +30,7 @@ impl Pmw3901 {
             .bits_per_word(8)
             .max_speed_hz(2_000_000)
             .lsb_first(false)
-            .mode(SPI_MODE_3)
+            .mode(SpiModeFlags::SPI_MODE_3)
             .build();
         spi_dev.configure(&options)?;
         Ok(Pmw3901 {
