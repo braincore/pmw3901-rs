@@ -8,9 +8,11 @@ repository = "https://github.com/braincore/pmw3901-rs"
 keywords = ["pmw3901"]
 readme = "README.md"
 
+edition = "2021"
+
 [dependencies]
-byteorder = "1.1.0"
-spidev = "0.3.0"
+byteorder = "1.4.3"
+spidev = "0.5.1"
 
 [[example]]
 name = "scan"

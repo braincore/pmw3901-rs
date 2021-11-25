@@ -1,14 +1,13 @@
 //! A library for the PMW3901 optical flow sensor.
 
-extern crate byteorder;
 use byteorder::{ByteOrder, LittleEndian};
-extern crate spidev;
-use spidev::{Spidev, SpidevOptions, SpidevTransfer, SPI_MODE_3};
+use spidev::SpiModeFlags;
+use spidev::{Spidev, SpidevOptions, SpidevTransfer};
 use std::io;
 use std::thread;
 use std::time;
 
-/// Motion output of the sensor. 
+/// Motion output of the sensor.
 #[derive(Debug)]
 pub struct Pmw3901Sample {
     /// Unit is pixel velocity.
@@ -24,17 +23,15 @@ pub struct Pmw3901 {
 }
 
 impl Pmw3901 {
-
     // Initializes the SPI connection but does not use it.
     pub fn new(bus: u8, chip_select: u8) -> io::Result<Pmw3901> {
-        let mut spi_dev = Spidev::open(
-            format!("/dev/spidev{}.{}", bus, chip_select))?;
+        let mut spi_dev = Spidev::open(format!("/dev/spidev{}.{}", bus, chip_select))?;
         let options = SpidevOptions::new()
-             .bits_per_word(8)
-             .max_speed_hz(2_000_000)
-             .lsb_first(false)
-             .mode(SPI_MODE_3)
-             .build();
+            .bits_per_word(8)
+            .max_speed_hz(2_000_000)
+            .lsb_first(false)
+            .mode(SpiModeFlags::SPI_MODE_3)
+            .build();
         spi_dev.configure(&options)?;
         Ok(Pmw3901 {
             spi_dev,
@@ -81,7 +78,7 @@ impl Pmw3901 {
         let mut bufs = Vec::new();
         for addr in addrs {
             bufs.push(([*addr, 0], [0, 0]));
-        } 
+        }
         {
             let mut transfers = Vec::new();
             for buf in bufs.iter_mut() {
@@ -105,7 +102,7 @@ impl Pmw3901 {
         let mut bufs = Vec::new();
         for &(addr, val) in addrs_and_values {
             bufs.push(([addr | 0x80, val], [0, 0]));
-        } 
+        }
         {
             let mut transfers = Vec::new();
             for buf in bufs.iter_mut() {
@@ -144,7 +141,10 @@ impl Pmw3901 {
         // Verify inverse product id
         let inverse_product_id = self.read_register(0x5f)?;
         if inverse_product_id != 0xb6 {
-            panic!("Unexpected inverse product id: {} (expected 0xb6)", product_id);
+            panic!(
+                "Unexpected inverse product id: {} (expected 0xb6)",
+                product_id
+            );
         }
         if self.debug {
             println!("Inverse Product ID: {:?}", inverse_product_id);
@@ -250,45 +250,42 @@ impl Pmw3901 {
         //})
         let res = self.read_registers(&[0x02, 0x03, 0x04, 0x05, 0x06])?;
         Ok(Pmw3901Sample {
-            x: LittleEndian::read_i16(&res[1 .. 3]),
-            y: LittleEndian::read_i16(&res[3 .. 5]),
+            x: LittleEndian::read_i16(&res[1..3]),
+            y: LittleEndian::read_i16(&res[3..5]),
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Pmw3901};
+    use super::Pmw3901;
     use std::env;
 
     fn get_spi_bus() -> u8 {
         match env::var("PMW3901_SPI_BUS") {
-            Ok(bus_string) => {
-                bus_string.parse().expect(
-                    "Could not convert PMW3901_SPI_BUS env var to u8.")
-            },
+            Ok(bus_string) => bus_string
+                .parse()
+                .expect("Could not convert PMW3901_SPI_BUS env var to u8."),
             Err(_) => {
                 panic!("PMW3901_SPI_BUS must be specified.");
-            },
+            }
         }
     }
 
     fn get_spi_cs() -> u8 {
         match env::var("PMW3901_SPI_CS") {
-            Ok(addr_string) => {
-                addr_string.parse().expect(
-                    "Could not convert PMW3901_SPI_CS env var to u8.")
-            },
+            Ok(addr_string) => addr_string
+                .parse()
+                .expect("Could not convert PMW3901_SPI_CS env var to u8."),
             Err(_) => {
                 panic!("PMW3901_SPI_CS must be specified.");
-            },
+            }
         }
     }
 
     #[test]
     fn basic() {
-        let mut pmw3901 = Pmw3901::new(
-            get_spi_bus(), get_spi_cs()).unwrap();
+        let mut pmw3901 = Pmw3901::new(get_spi_bus(), get_spi_cs()).unwrap();
         pmw3901.init().unwrap();
         pmw3901.read_sample().unwrap();
     }
